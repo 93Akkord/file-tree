@@ -1,0 +1,2 @@
+- set SETUPTOOLS_SCM_PRETEND_VERSION=0.0.1
+- pip install -e .
