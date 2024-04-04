@@ -212,7 +212,30 @@ if os.name == 'nt':
             else:
                 output_buf_size = needed
 
-    # def listdir_stat(dirname='.', glob: str | None = None) -> Generator[Tuple[str, os.stat_result, bool], Any, None]:
+    def get_long_path_name(short_path: str) -> str:
+        """
+        Gets the long path name of a given short path.
+        http://stackoverflow.com/a/23598461/200291
+
+        :param str short_path: short path name
+        :return str: long path name
+        """
+
+        _GetLongPathNameW = windll.kernel32.GetLongPathNameW
+        _GetLongPathNameW.argtypes = [LPCWSTR, LPWSTR, DWORD]
+        _GetLongPathNameW.restype = DWORD
+
+        output_buf_size = 0
+
+        while True:
+            output_buf = create_unicode_buffer(output_buf_size)
+            needed = _GetLongPathNameW(short_path, output_buf, output_buf_size)
+
+            if output_buf_size >= needed:
+                return output_buf.value
+            else:
+                output_buf_size = needed
+
     def listdir_stat(dirname='.', glob: str | None = None) -> Generator[Tuple[str, os.stat_result], Any, None]:
         dirname = os.path.abspath(dirname)
         dirname = get_short_path_name(dirname) if len(dirname) >= 256 else dirname
@@ -495,10 +518,8 @@ class Folder(File):
 
             return item
 
-        while first_run:  # or len(to_be_removed) > 0:
+        while first_run:
             first_run = False
-
-            # to_be_removed: List[Folder] = []
 
             self.walk(cb)
 
@@ -506,6 +527,65 @@ class Folder(File):
 
     @size.setter
     def size(self, value: int):
+        pass
+
+    # @property
+    # def nested_child_count(self) -> int:
+    #     child_counts: List[int] = []
+    #     first_run = True
+
+    #     def cb(item: File | Folder, level: int, is_last: bool, is_mid_child: bool) -> File | Folder:
+    #         if type(item) == Folder:
+    #             # count = len(item.children)
+                
+    #             # print(f'count: {count}')
+
+    #             child_counts.append(item.nested_child_count)
+
+    #         return item
+
+    #     while first_run:
+    #         first_run = False
+
+    #         self.walk(cb)
+
+    #     if self.path == 'C:\\Users\\mbarros\\development\\big_data\\entity_resolution\\spark-node-dev\\scripts\\python\\tools\\glue_jobs_backups':
+    #         print('Here01')
+
+    #     return sum(child_counts)
+
+    # @property
+    # def nested_child_count(self) -> int:
+    #     queue = [self]
+    #     count = 0
+
+    #     while queue:
+    #         current_folder = queue.pop(0)
+    #         count += len(current_folder.children)
+    #         queue.extend(child for child in current_folder.children if isinstance(child, Folder))
+
+    #     return count
+
+    @property
+    def nested_child_count(self) -> Tuple[int, int]:
+        queue: List[Folder] = [self]
+        folder_count = 0
+        file_count = 0
+
+        while queue:
+            current_folder: Folder = queue.pop(0)
+
+            for child in current_folder.children:
+                if isinstance(child, Folder):
+                    folder_count += 1
+                    queue.append(child)
+                elif isinstance(child, File):
+                    file_count += 1
+
+        return folder_count, file_count
+
+    @nested_child_count.setter
+    def nested_child_count(self, value: Tuple[int, int]):
         pass
 
     def walk_create_output_str(self, callback: Callable[[Union[File, Folder], int, bool, bool, str], None], level: int = 0, prefix: str = '', remove_pipe: bool = False) -> None:
@@ -560,7 +640,8 @@ class FileTreeMaker(object):
                  exclude_empty_files: bool,
                  later_than_date: str,
                  links: bool,
-                 show_size: bool):
+                 show_size: bool,
+                 show_counts: bool):
         global error_files
 
         error_files = []
@@ -577,6 +658,7 @@ class FileTreeMaker(object):
         self.later_than_date = later_than_date
         self.links = links
         self.show_size = show_size
+        self.show_counts = show_counts
 
         self.root_dir_tree = self.make_dir_tree()
 
@@ -723,14 +805,14 @@ class FileTreeMaker(object):
             else:
                 name = '{name}'.format(name=create_colored_str(item_name, color_file_type)) if item.type == 'Folder' else create_colored_str(item_name, color_file_type)
 
-            size = f' ({bytes_2_human_readable(item.size)})' if self.show_size else ''
+            size_count_str = get_size_count_str(self, item)
 
-            output = '{prefix}{idc}{space}{icon} {name}{size}'.format(prefix=prefix,
+            output = '{prefix}{idc}{space}{icon} {name}{size_count_str}'.format(prefix=prefix,
                                                                       idc=idc,
                                                                       space='' if type(item) == Folder and item.is_root else ' ',
                                                                       icon=icon,
                                                                       name=name,
-                                                                      size=size)
+                                                                      size_count_str=size_count_str)
 
             lines.append(output)
 
@@ -751,9 +833,9 @@ class FileTreeMaker(object):
             else:
                 name = item.path
 
-            size = f' ({bytes_2_human_readable(item.size)})' if self.show_size else ''
+            size_count_str = get_size_count_str(self, item)
 
-            output = '{name}{size}'.format(name=name, size=size)
+            output = '{name}{size_count_str}'.format(name=name, size_count_str=size_count_str)
 
             lines.append(output)
 
@@ -762,6 +844,23 @@ class FileTreeMaker(object):
         output_str = '\n'.join(lines)
 
         return output_str
+
+
+def get_size_count_str(file_tree_maker: FileTreeMaker, item: File | Folder):
+    size_count = []
+
+    if file_tree_maker.show_size:
+        size_count.append(bytes_2_human_readable(item.size))
+
+    if file_tree_maker.show_counts and type(item) == Folder:
+        folders = item.nested_child_count[0]
+        files = item.nested_child_count[1]
+
+        size_count.append(f'{files} Files, {folders} Folders, {folders + files} Total')
+
+    size_count_str = f" ({' -- '.join(size_count)})" if file_tree_maker.show_size or file_tree_maker.show_counts else ''
+
+    return size_count_str
 
 
 def sigint_handler(signum: int, frame: Any):
@@ -788,6 +887,7 @@ def __run(root: str,
           later_than_date: str,
           links: bool,
           show_size: bool,
+          show_counts: bool,
           errors: bool) -> None:
     signal.signal(signal.SIGINT, sigint_handler)
 
@@ -809,7 +909,8 @@ def __run(root: str,
                                     exclude_empty_files=exclude_empty_files,
                                     later_than_date=later_than_date,
                                     links=links,
-                                    show_size=show_size)
+                                    show_size=show_size,
+                                    show_counts=show_counts)
 
     output_str = file_tree_maker.to_flat_str() if flat else file_tree_maker.to_tree_str()
 
@@ -822,16 +923,14 @@ def __run(root: str,
     else:
         name = 'root: {root}'.format(root=root)
 
-    size = f' ({bytes_2_human_readable(file_tree_maker.root_dir_tree.size)})' if show_size else ''
+    size_count_str = get_size_count_str(file_tree_maker, file_tree_maker.root_dir_tree)
 
-    root_str = '{name}{size}'.format(name=name, size=size)
+    root_str = '{name}{size_count_str}'.format(name=name, size_count_str=size_count_str)
 
     output_str = output_str.replace('�', '')
 
     print(root_str)
     print(output_str)
-    # for line in output_str.split('\n'):
-    #     print(line)
 
     if errors and len(error_files) > 0:
         print('')
@@ -854,6 +953,8 @@ def remove_surrounding_quotes(string: str) -> str:
 def parse_args() -> Namespace:
     import argparse
 
+    from file_tree.version import __version__
+
     class ExtendAction(argparse.Action):
         def __call__(self, parser, namespace, values, option_string=None):
             items = getattr(namespace, self.dest) or []
@@ -869,6 +970,7 @@ def parse_args() -> Namespace:
     parser.register('action', 'extend', ExtendAction)
 
     # Add command-line arguments
+    parser.add_argument('-v', '--version', action='version', version=__version__, help='Display version')
     parser.add_argument('-r', '--root', default='.', type=str, help='Root path to git repository')
     parser.add_argument('-o', '--output', default=None, type=str, help='Output to filepath provided')
     parser.add_argument('-m', '--max-level', default=-1, type=int, help='Max level')
@@ -883,6 +985,7 @@ def parse_args() -> Namespace:
     parser.add_argument('-ltd', '--later-than-date', default=None, type=str, help='Include files later than date.  Must be in yyyy-MM-dd format')
     parser.add_argument('-l', '--links', default=False, action='store_true', help='Show hyperlinks in terminal')
     parser.add_argument('-s', '--show-size', default=False, action='store_true', help='Show size of files/folders in terminal')
+    parser.add_argument('-c', '--show-counts', default=False, action='store_true', help='Show counts of files/folders in terminal')
     parser.add_argument('-e', '--errors', default=False, action='store_true', help='Display which files had errors')
 
     # Parse the command-line arguments
@@ -928,6 +1031,13 @@ if __name__ == '__main__':
     #     '-s'
     # ]
 
-    # sys.argv = sys.argv + args
+    args = [
+        '-r',
+        'C:\\Users\\mbarros\\development\\big_data\\entity_resolution\\spark-node-dev\\scripts\\python\\tools',
+        '-s',
+        '-c',
+    ]
+
+    sys.argv = sys.argv + args
 
     run()
