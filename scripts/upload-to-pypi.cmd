@@ -11,6 +11,7 @@ for /f "delims=" %%x in ('dir /B /OD dist') do set latest=%%x
 echo Uploading to PyPI...
 
 rem twine upload dist/*
-twine upload dist/%latest% --verbose
+rem twine upload dist/%latest% --verbose
+twine upload dist/* --verbose
 
 rem echo The latest file is: %latest%
