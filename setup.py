@@ -9,5 +9,13 @@
 
 from setuptools import setup
 
-if __name__ == "__main__":
-    setup(name="akkd-file-tree",)
+if __name__ == '__main__':
+    setup(name='akkd-file-tree',
+
+          author='Michael Barros',
+
+          author_email='michaelcbarros@gmail.com',
+
+          url='https://github.com/93Akkord/file-tree',
+
+          download_url='https://github.com/93Akkord/file-tree/archive/refs/tags/v0.0.3.tar.gz')
