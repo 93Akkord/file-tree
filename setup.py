@@ -18,4 +18,4 @@ if __name__ == '__main__':
 
           url='https://github.com/93Akkord/file-tree',
 
-          download_url='https://github.com/93Akkord/file-tree/archive/refs/tags/v0.0.3.tar.gz')
+          download_url='https://github.com/93Akkord/file-tree/archive/refs/tags/v0.0.5.tar.gz')
