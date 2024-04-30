@@ -1,5 +1,3 @@
-============
-Contributors
-============
+# Contributors
 
-* Michael Barros <michaelcbarros@gmail.com>
+- Michael Barros <michaelcbarros@gmail.com>

@@ -1,4 +1,4 @@
-# !/home/rda_admin/portable/python/install/bin/python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 '''file-tree.py: ...'''
@@ -25,6 +25,13 @@ import six
 from _collections_abc import dict_items, dict_keys, dict_values
 
 
+__all__ = [
+    'File',
+    'Folder',
+    'FileTreeMaker',
+    'print_file_tree',
+]
+
 faulthandler.enable()
 
 
@@ -44,18 +51,7 @@ T = TypeVar('T')
 # region Icons
 
 
-class IconsMeta(type):
-    def __new__(cls: Type['IconsMeta'], name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]) -> 'IconsMeta':
-        for attr_name, attr_value in attrs.items():
-            if not callable(attr_value) and not attr_name.startswith('__'):
-                # emoji = '\uFE0F'
-                # text = '\uFE0E'
-                attrs[attr_name] = attr_value.lower() + '\0'
-
-        return super().__new__(cls, name, bases, attrs)
-
-
-class Icons:  # (metaclass=IconsMeta)
+class Icons:
     FOLDER = b'\xf0\x9f\x93\x81'.decode('utf-8')
     OPEN_FOLDER = b'\xf0\x9f\x93\x82'.decode('utf-8')
     FILE = b'\xf0\x9f\x93\x84'.decode('utf-8')
@@ -65,13 +61,6 @@ class Icons:  # (metaclass=IconsMeta)
 # endregion Icons
 
 # region utils.py
-
-
-def is_admin():
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
-        return False
 
 
 def bytes_2_human_readable(number_of_bytes: int | float, si=False, decimals=1) -> str:
@@ -260,11 +249,7 @@ if os.name == 'nt':
                 'error': str(error)
             })
 
-            print('filename:', filename)
-            print('\n' * 3)
-
             raise error
-
         try:
             while True:
                 if data.cFileName not in ('.', '..'):
@@ -419,34 +404,6 @@ class File(dict):
 
         self.parent = None
 
-    # region Old Code
-
-    # def get_key_path_old(self) -> List[int]:
-    #     key_path = []
-
-    #     temp_self = self
-
-    #     while temp_self.parent is not None:
-    #         print(temp_self.path)
-
-    #         index = get_obj_index(temp_self.parent.children, temp_self)
-
-    #         key_path.append(index)
-
-    #         temp_self = temp_self.parent
-
-    #     return reversed(key_path)
-
-    # def remove_path_old(self, key_path: List[int]):
-    #     temp_self = self
-
-    #     for i in key_path:
-    #         temp_self = temp_self.children[i]
-
-    #     temp_self.parent.children.remove(temp_self)
-
-    # endregion Old Code
-
     def __setitem__(self, key: Any, item: Any) -> None:
         self.__dict__[key] = item
 
@@ -529,43 +486,6 @@ class Folder(File):
     def size(self, value: int):
         pass
 
-    # @property
-    # def nested_child_count(self) -> int:
-    #     child_counts: List[int] = []
-    #     first_run = True
-
-    #     def cb(item: File | Folder, level: int, is_last: bool, is_mid_child: bool) -> File | Folder:
-    #         if type(item) == Folder:
-    #             # count = len(item.children)
-                
-    #             # print(f'count: {count}')
-
-    #             child_counts.append(item.nested_child_count)
-
-    #         return item
-
-    #     while first_run:
-    #         first_run = False
-
-    #         self.walk(cb)
-
-    #     if self.path == 'C:\\Users\\mbarros\\development\\big_data\\entity_resolution\\spark-node-dev\\scripts\\python\\tools\\glue_jobs_backups':
-    #         print('Here01')
-
-    #     return sum(child_counts)
-
-    # @property
-    # def nested_child_count(self) -> int:
-    #     queue = [self]
-    #     count = 0
-
-    #     while queue:
-    #         current_folder = queue.pop(0)
-    #         count += len(current_folder.children)
-    #         queue.extend(child for child in current_folder.children if isinstance(child, Folder))
-
-    #     return count
-
     @property
     def nested_child_count(self) -> Tuple[int, int]:
         queue: List[Folder] = [self]
@@ -629,19 +549,19 @@ class Folder(File):
 
 class FileTreeMaker(object):
     def __init__(self,
-                 root: str | bytes,
-                 max_level: int,
-                 remove_pipe: bool,
-                 exclude_folder: List[str] | List[bytes],
-                 exclude_name: List[str] | List[bytes],
-                 exclude_regex: List[str],
-                 include_regex: List[str],
-                 size_limit: int,
-                 exclude_empty_files: bool,
-                 later_than_date: str,
-                 links: bool,
-                 show_size: bool,
-                 show_counts: bool):
+                 root: str | bytes = '.',
+                 max_level: int = -1,
+                 remove_pipe: bool = False,
+                 exclude_folder: List[str] | List[bytes] = [],
+                 exclude_name: List[str] | List[bytes] = [],
+                 exclude_regex: List[str] | List[bytes] = [],
+                 include_regex: List[str] | List[bytes] = [],
+                 size_limit: int = -1,
+                 exclude_empty_files: bool = False,
+                 later_than_date: str = None,
+                 links: bool = False,
+                 show_size: bool = False,
+                 show_counts: bool = False) -> None:
         global error_files
 
         error_files = []
@@ -808,11 +728,11 @@ class FileTreeMaker(object):
             size_count_str = get_size_count_str(self, item)
 
             output = '{prefix}{idc}{space}{icon} {name}{size_count_str}'.format(prefix=prefix,
-                                                                      idc=idc,
-                                                                      space='' if type(item) == Folder and item.is_root else ' ',
-                                                                      icon=icon,
-                                                                      name=name,
-                                                                      size_count_str=size_count_str)
+                                                                                idc=idc,
+                                                                                space='' if type(item) == Folder and item.is_root else ' ',
+                                                                                icon=icon,
+                                                                                name=name,
+                                                                                size_count_str=size_count_str)
 
             lines.append(output)
 
@@ -867,30 +787,31 @@ def sigint_handler(signum: int, frame: Any):
     sys.exit(0)
 
 
+signal.signal(signal.SIGINT, sigint_handler)
+
+
 def run() -> None:
     res = parse_args()
 
-    __run(**res.__dict__)
+    print_file_tree(**res.__dict__)
 
 
-def __run(root: str,
-          output: str,
-          max_level: int,
-          flat: bool,
-          remove_pipe: bool,
-          exclude_folder: Tuple[str, ...] | List[str],
-          exclude_name: Tuple[str, ...] | List[str],
-          exclude_regex: Tuple[str, ...] | List[str],
-          include_regex: Tuple[str, ...] | List[str],
-          size_limit: int,
-          exclude_empty_files: bool,
-          later_than_date: str,
-          links: bool,
-          show_size: bool,
-          show_counts: bool,
-          errors: bool) -> None:
-    signal.signal(signal.SIGINT, sigint_handler)
-
+def print_file_tree(root: str | bytes = '.',
+                    output: str = None,
+                    max_level: int = -1,
+                    flat: bool = False,
+                    remove_pipe: bool = False,
+                    exclude_folder: List[str] | List[bytes] = [],
+                    exclude_name: List[str] | List[bytes] = [],
+                    exclude_regex: List[str] | List[bytes] = [],
+                    include_regex: List[str] | List[bytes] = [],
+                    size_limit: int = -1,
+                    exclude_empty_files: bool = False,
+                    later_than_date: str = None,
+                    links: bool = False,
+                    show_size: bool = False,
+                    show_counts: bool = False,
+                    errors: bool = False) -> None:
     exclude_folder = list(exclude_folder)
     exclude_name = list(exclude_name)
     exclude_regex = list(exclude_regex)
@@ -1013,31 +934,11 @@ def update_parsed_args(args: Namespace) -> Namespace:
 if __name__ == '__main__':
     # args = [
     #     '-r',
-    #     r'C:\Users\mbarros\development\big_data\entity_resolution\spark-node-dev',
-    #     '-xf',
-    #     '"node_modules"',
-    #     # '-l',
-    #     # '-f',
-    #     # '-e',
-    #     '-ir',
-    #     r'"(\.py|\.js)$"',
+    #     'C:\\Users\\mbarros\\development\\big_data\\entity_resolution\\spark-node-dev\\scripts\\python\\tools',
+    #     '-s',
+    #     '-c',
     # ]
 
-    # args = [
-    #     '-r',
-    #     r'C:\Program Files (x86)\Microsoft Visual Studio\2017',
-    #     # '-rp',
-    #     '-l',
-    #     '-s'
-    # ]
-
-    args = [
-        '-r',
-        'C:\\Users\\mbarros\\development\\big_data\\entity_resolution\\spark-node-dev\\scripts\\python\\tools',
-        '-s',
-        '-c',
-    ]
-
-    sys.argv = sys.argv + args
+    # sys.argv = sys.argv + args
 
     run()
