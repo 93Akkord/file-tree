@@ -20,8 +20,6 @@ from argparse import Namespace
 from functools import cached_property
 from typing import Any, Callable, Dict, Generator, Iterator, List, Tuple, Type, TypeVar, Union
 
-import six
-
 from _collections_abc import dict_items, dict_keys, dict_values
 
 
@@ -453,8 +451,7 @@ class File(dict):
         return iter(self.__dict__)
 
     def __unicode__(self) -> str:
-
-        return six.text_type(repr(self.__dict__))
+        return str(repr(self.__dict__))
 
 
 class Folder(File):
