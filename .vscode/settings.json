@@ -1,0 +1,42 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/__pycache__": true,
+        "**/*.egg-info": true,
+        "**/tempCodeRunnerFile.*": true
+    },
+
+    "taskExplorer.exclude": [
+        "**/.vscode-test/**",
+        "**/Assets/**",
+        "**/bin/**",
+        "**/build/**",
+        "**/dist/**",
+        "**/doc/**",
+        "**/example/**",
+        "**/examples/**",
+        "**/ext/**",
+        "**/obj/**",
+        "**/out/**",
+        "**/output/**",
+        "**/packages/**",
+        "**/release/**",
+        "**/releases/**",
+        "**/samples/**",
+        "**/sdks/**",
+        "**/static/**",
+        "**/target/**",
+        "**/test/**",
+        "**/third_party/**",
+        "**/vendor/**",
+        "**/work/**",
+        "/c:/Users/Barros/development/python/repos/file-tree/src/file_tree/**",
+        "**/setup.py",
+        "/c:/Users/Barros/development/python/repos/file-tree/scripts/**"
+    ]
+}

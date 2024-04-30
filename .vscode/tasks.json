@@ -1,0 +1,60 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Test",
+            "command": "sh",
+            "type": "process",
+            "args": ["./scripts/run-test.sh"],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "clear": true,
+                "panel": "dedicated"
+            },
+            "group": "none",
+        },
+
+        {
+            "label": "Build",
+            "command": "sh",
+            "type": "process",
+            "args": ["./scripts/build-dist.sh"],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "clear": true,
+                "panel": "dedicated"
+            },
+            "group": "none",
+        },
+
+        {
+            "label": "Upload To PyPi",
+            "command": "sh",
+            "type": "process",
+            "args": ["./scripts/upload-to-pypi.sh"],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "clear": true,
+                "panel": "dedicated"
+            },
+            "group": "none",
+        },
+
+        {
+            "label": "Run Coverage",
+            "command": "bash",
+            "type": "process",
+            "args": ["./scripts/run-coverage.sh"],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "clear": true,
+                "panel": "dedicated"
+            },
+            "group": "none",
+        },
+    ],
+}
